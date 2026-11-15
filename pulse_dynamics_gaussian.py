@@ -229,8 +229,11 @@ for col in range(4):
 for row in range(5):
     axs_pg[row, 0].set_ylabel(r"$\eta(t)$ ($\mathrm{ps}^{-1}$)")
 
+os.makedirs("figures/gaussian", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("pulse_profiles_gaussian_comparison.png", dpi=200)
+plt.savefig("figures/gaussian/pulse_profiles_gaussian_comparison.png", dpi=200)
 plt.show()
 
 # ------------------------------------------------------------------------------
@@ -264,7 +267,7 @@ for row in range(5):
     axs_pop_g[row, 0].set_ylabel("Population")
 
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("population_dynamics_gaussian_comparison.png", dpi=200)
+plt.savefig("figures/gaussian/population_dynamics_gaussian_comparison.png", dpi=200)
 plt.show()
 
 # ------------------------------------------------------------------------------
@@ -290,7 +293,7 @@ for col in range(4):
 for row in range(5):
     axs_eg[row, 0].set_ylabel("Energy Stored (meV)")
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("energy_stored_gaussian_comparison.png", dpi=200)
+plt.savefig("figures/gaussian/energy_stored_gaussian_comparison.png", dpi=200)
 plt.show()
 
 # 3b. Charging Power P(t)
@@ -309,7 +312,7 @@ for col in range(4):
 for row in range(5):
     axs_pwg[row, 0].set_ylabel("Power (eV / ps)")
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("charging_power_gaussian_comparison.png", dpi=200)
+plt.savefig("figures/gaussian/charging_power_gaussian_comparison.png", dpi=200)
 plt.show()
 
 # 3c. Ergotropy (Extractable Work)
@@ -331,7 +334,287 @@ for col in range(4):
 for row in range(5):
     axs_ergg[row, 0].set_ylabel("Energy / Ergotropy (meV)")
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-plt.savefig("ergotropy_gaussian_comparison.png", dpi=200)
+plt.savefig("figures/gaussian/ergotropy_gaussian_comparison.png", dpi=200)
+plt.show()
+
+# 3d. Peak Population Saturation Analysis Across 20 Gaussian Variations
+print("Plotting Gaussian Peak Population Saturation Analysis...")
+mult_arr_g = np.array(gaussian_multipliers, dtype=float)
+fwhms_g = np.array([s * fwhm_factor for s in gaussian_sigmas])
+peak_T1_g  = np.array([np.real(res.expect[2]).max() for res in gaussian_results])
+peak_S10_g = np.array([np.real(res.expect[0]).max() for res in gaussian_results])
+peak_S11_g = np.array([np.real(res.expect[1]).max() for res in gaussian_results])
+peak_E_g   = np.array([th[0].max() * 1e3 for th in gaussian_thermos])
+peak_Erg_g = np.array([th[2].max() * 1e3 for th in gaussian_thermos])
+
+fig_sat_g, axs_sat_g = plt.subplots(2, 2, figsize=(16, 11.5))
+fig_sat_g.suptitle("Peak Population Saturation Analysis Across 20 Energy-Normalized Gaussian Pulses", fontsize=14, fontweight="bold", y=0.98)
+
+# Panel (a): Absolute Peak Populations vs FWHM
+ax_s1 = axs_sat_g[0, 0]
+ax_s1.plot(fwhms_g, peak_T1_g, "o-", color="#9467bd", lw=2.2, ms=6, label=r"Peak $T_1$ ($\max_t P_{T_1}$)")
+ax_s1.plot(fwhms_g, peak_S10_g, "s-", color="#e6a817", lw=2.2, ms=6, label=r"Peak $S_1^0$ ($\max_t P_{S_1^0}$)")
+ax_s1.plot(fwhms_g, peak_S11_g, "^-", color="#17a2b8", lw=2.2, ms=6, label=r"Peak $S_1^1$ ($\max_t P_{S_1^1}$)")
+
+idx_t1_max = int(np.argmax(peak_T1_g))
+idx_s10_max = int(np.argmax(peak_S10_g))
+idx_s11_max = int(np.argmax(peak_S11_g))
+
+ax_s1.plot(fwhms_g[idx_t1_max], peak_T1_g[idx_t1_max], "o", color="#9467bd", ms=11, mfc="none", mew=2.2)
+ax_s1.annotate(f"Saturation: {peak_T1_g[idx_t1_max]:.4f}\n({mult_arr_g[idx_t1_max]:.1f}x, {fwhms_g[idx_t1_max]:.0f} fs)",
+               xy=(fwhms_g[idx_t1_max], peak_T1_g[idx_t1_max]), xytext=(fwhms_g[idx_t1_max]-115, peak_T1_g[idx_t1_max]-0.038),
+               arrowprops=dict(arrowstyle="->", color="#9467bd", lw=1.2), fontsize=8.5, color="#5a3582", fontweight="bold")
+
+ax_s1.plot(fwhms_g[idx_s10_max], peak_S10_g[idx_s10_max], "s", color="#e6a817", ms=11, mfc="none", mew=2.2)
+ax_s1.annotate(f"Peak $S_1^0$: {peak_S10_g[idx_s10_max]:.4f}\n({mult_arr_g[idx_s10_max]:.1f}x, {fwhms_g[idx_s10_max]:.0f} fs)",
+               xy=(fwhms_g[idx_s10_max], peak_S10_g[idx_s10_max]), xytext=(fwhms_g[idx_s10_max]-25, peak_S10_g[idx_s10_max]+0.024),
+               arrowprops=dict(arrowstyle="->", color="#c48a00", lw=1.2), fontsize=8.5, color="#9c6d00", fontweight="bold")
+
+ax_s1.plot(fwhms_g[idx_s11_max], peak_S11_g[idx_s11_max], "^", color="#17a2b8", ms=11, mfc="none", mew=2.2)
+ax_s1.annotate(f"Peak $S_1^1$: {peak_S11_g[idx_s11_max]:.4f} ({mult_arr_g[idx_s11_max]:.1f}x)",
+               xy=(fwhms_g[idx_s11_max], peak_S11_g[idx_s11_max]), xytext=(fwhms_g[idx_s11_max]-35, peak_S11_g[idx_s11_max]+0.018),
+               arrowprops=dict(arrowstyle="->", color="#117a8b", lw=1.2), fontsize=8.0, color="#0d5e6b", fontweight="bold")
+
+ax_s1.axvline(200.0, color="gray", ls="--", lw=1.1, alpha=0.7, label=r"ISC Timescale $\tau_{\mathrm{ISC}} = 200$ fs")
+ax_s1.set_title("(a) Peak Excited-State Populations vs. Pulse FWHM", fontsize=11, fontweight="bold", pad=26)
+ax_s1.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_s1.set_ylabel("Peak Population")
+ax_s1.set_ylim(0, 0.275)
+ax_s1.grid(True, alpha=0.3)
+ax_s1.legend(loc="upper left", frameon=True, fontsize=8.0)
+
+ax_top = ax_s1.twiny()
+ax_top.set_xlim(ax_s1.get_xlim())
+tick_mults = [0.5, 1.0, 2.5, 4.0, 5.0, 7.0, 9.0, 11.0]
+ax_top.set_xticks([m * (sigma_orig * fwhm_factor) for m in tick_mults])
+ax_top.set_xticklabels([f"{m:g}x" for m in tick_mults], fontsize=8)
+ax_top.set_xlabel(r"Width Multiplier ($\sigma / \sigma_{\mathrm{orig}}$)", fontsize=8.5, labelpad=4)
+
+# Panel (b): Normalized Peak Populations
+ax_s2 = axs_sat_g[0, 1]
+ax_s2.plot(fwhms_g, peak_T1_g / peak_T1_g.max(), "o-", color="#9467bd", lw=2.2, ms=6, label=r"$T_1$ (Monotonic Saturation at $11.0\times$)")
+ax_s2.plot(fwhms_g, peak_S10_g / peak_S10_g.max(), "s-", color="#e6a817", lw=2.2, ms=6, label=r"$S_1^0$ (Peaks at $5.0\times = 175$ fs, then decays)")
+ax_s2.plot(fwhms_g, peak_S11_g / peak_S11_g.max(), "^--", color="#17a2b8", lw=2.0, ms=6, label=r"$S_1^1$ (Peaks at $5.0\times = 175$ fs, then decays)")
+ax_s2.axvline(fwhms_g[idx_s10_max], color="#e6a817", ls=":", lw=1.5, alpha=0.85, label=f"Singlet Turnover (FWHM = {fwhms_g[idx_s10_max]:.0f} fs)")
+ax_s2.axhline(1.0, color="black", ls="--", lw=0.9, alpha=0.5)
+ax_s2.set_title(r"(b) Normalized Peak Population ($P_{\max} / P_{\max}^{\mathrm{global}}$) — Saturation vs. Turnover", fontsize=11, fontweight="bold", pad=12)
+ax_s2.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_s2.set_ylabel("Normalized Peak Population")
+ax_s2.set_ylim(0.15, 1.06)
+ax_s2.grid(True, alpha=0.3)
+ax_s2.legend(loc="lower right", frameon=True, fontsize=8.5)
+
+# Panel (c): Saturation Rate d(P_max) / d(Multiplier)
+ax_s3 = axs_sat_g[1, 0]
+dm_g = np.diff(mult_arr_g)
+fwhm_mid_g = 0.5 * (fwhms_g[:-1] + fwhms_g[1:])
+ax_s3.plot(fwhm_mid_g, (np.diff(peak_T1_g) / dm_g) * 1e3, "o-", color="#9467bd", lw=2.0, ms=5.5, label=r"$dP_{\max}(T_1)/d(\sigma/\sigma_0)$ ($\times 10^{-3}$)")
+ax_s3.plot(fwhm_mid_g, (np.diff(peak_S10_g) / dm_g) * 1e3, "s-", color="#e6a817", lw=2.0, ms=5.5, label=r"$dP_{\max}(S_1^0)/d(\sigma/\sigma_0)$ ($\times 10^{-3}$)")
+ax_s3.plot(fwhm_mid_g, (np.diff(peak_S11_g) / dm_g) * 1e3, "^-", color="#17a2b8", lw=2.0, ms=5.5, label=r"$dP_{\max}(S_1^1)/d(\sigma/\sigma_0)$ ($\times 10^{-3}$)")
+ax_s3.axhline(0.0, color="black", ls="--", lw=1.1, alpha=0.7, label=r"Saturation / Turnover Threshold ($dP_{\max}/dm = 0$)")
+ax_s3.axvline(fwhms_g[idx_s10_max], color="#e6a817", ls=":", lw=1.4, alpha=0.8)
+ax_s3.set_title(r"(c) Saturation Rate $dP_{\max} / d(\sigma/\sigma_{\mathrm{orig}})$ — Asymptotic Convergence", fontsize=11, fontweight="bold")
+ax_s3.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_s3.set_ylabel(r"Slope $dP_{\max} / dm$ ($\times 10^{-3}$ per $1\times\sigma_{\mathrm{orig}}$)")
+ax_s3.grid(True, alpha=0.3)
+ax_s3.legend(loc="upper right", frameon=True, fontsize=8.5)
+
+# Panel (d): Peak Stored Energy E_max and Peak Ergotropy vs FWHM
+ax_s4 = axs_sat_g[1, 1]
+ax_s4.plot(fwhms_g, peak_E_g, "o-", color="#2ca02c", lw=2.2, ms=6, label=r"Peak Stored Energy $E_{\max}$")
+ax_s4.plot(fwhms_g, peak_Erg_g, "D-", color="#d62728", lw=2.2, ms=6, label=r"Peak Ergotropy $\mathcal{E}_{\max}$")
+
+idx_e_max = int(np.argmax(peak_E_g))
+idx_erg_max = int(np.argmax(peak_Erg_g))
+ax_s4.plot(fwhms_g[idx_e_max], peak_E_g[idx_e_max], "o", color="#2ca02c", ms=11, mfc="none", mew=2.2)
+ax_s4.annotate(f"$E_{{\\max}}$ Saturation: {peak_E_g[idx_e_max]:.2f} meV\n({mult_arr_g[idx_e_max]:.1f}x, {fwhms_g[idx_e_max]:.1f} fs)",
+               xy=(fwhms_g[idx_e_max], peak_E_g[idx_e_max]), xytext=(fwhms_g[idx_e_max]-135, peak_E_g[idx_e_max]-55),
+               arrowprops=dict(arrowstyle="->", color="#2ca02c", lw=1.2), fontsize=8.5, color="#1b691b", fontweight="bold")
+
+ax_s4.plot(fwhms_g[idx_erg_max], peak_Erg_g[idx_erg_max], "D", color="#d62728", ms=11, mfc="none", mew=2.2)
+ax_s4.annotate(f"Peak Ergotropy: {peak_Erg_g[idx_erg_max]:.2f} meV\n({mult_arr_g[idx_erg_max]:.1f}x, {fwhms_g[idx_erg_max]:.1f} fs)",
+               xy=(fwhms_g[idx_erg_max], peak_Erg_g[idx_erg_max]), xytext=(fwhms_g[idx_erg_max]+15, peak_Erg_g[idx_erg_max]+28),
+               arrowprops=dict(arrowstyle="->", color="#d62728", lw=1.2), fontsize=8.5, color="#a11818", fontweight="bold")
+
+ax_s4.set_title(r"(d) Impact on Battery Thermodynamics: $E_{\max}$ Saturation vs. $\mathcal{E}_{\max}$ Optimum", fontsize=11, fontweight="bold")
+ax_s4.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_s4.set_ylabel("Energy / Ergotropy (meV)")
+ax_s4.set_ylim(50, 430)
+ax_s4.grid(True, alpha=0.3)
+ax_s4.legend(loc="center right", frameon=True, fontsize=8.5)
+
+plt.tight_layout(rect=[0, 0, 1, 0.96])
+plt.savefig("figures/gaussian/peak_population_saturation_gaussian.png", dpi=200)
+plt.show()
+
+# 3e. Post-Peak Exciton Decay Rate Analysis Across 20 Gaussian Variations
+print("Plotting Gaussian Post-Peak Exciton Decay Rate Analysis...")
+import matplotlib.colors as mcolors
+
+tau_half_s10, tau_1e_s10, k_1e_s10, k_fit_s10, max_dp_s10 = [], [], [], [], []
+tau_half_s11, tau_1e_s11, k_1e_s11, k_fit_s11, max_dp_s11 = [], [], [], [], []
+k_fit_t1, tau_t1, max_dp_t1 = [], [], []
+
+def extract_decay_metrics(p, t_arr):
+    idx_pk = int(np.argmax(p))
+    t_pk = t_arr[idx_pk]
+    p_pk = p[idx_pk]
+    t_dense = np.linspace(t_pk, t_arr[-1], 6000)
+    p_dense = np.interp(t_dense, t_arr[idx_pk:], p[idx_pk:])
+    t_half = t_dense[np.where(p_dense <= 0.5 * p_pk)[0][0]] - t_pk
+    t_1e   = t_dense[np.where(p_dense <= (1.0 / np.e) * p_pk)[0][0]] - t_pk
+    dp_dt = -np.gradient(p, t_arr)
+    v_max = dp_dt[idx_pk:].max()
+    mask = (t_arr > t_pk) & (p <= 0.90 * p_pk) & (p >= 0.20 * p_pk)
+    k_fit = -np.polyfit(t_arr[mask] - t_pk, np.log(p[mask]), 1)[0]
+    return t_half, t_1e, 1.0 / t_1e, k_fit, v_max
+
+for res in gaussian_results:
+    s10 = np.real(res.expect[0])
+    s11 = np.real(res.expect[1])
+    t1  = np.real(res.expect[2])
+    th10, te10, ke10, kf10, vm10 = extract_decay_metrics(s10, tlist)
+    th11, te11, ke11, kf11, vm11 = extract_decay_metrics(s11, tlist)
+    tau_half_s10.append(th10 * 1e3); tau_1e_s10.append(te10 * 1e3); k_1e_s10.append(ke10); k_fit_s10.append(kf10); max_dp_s10.append(vm10)
+    tau_half_s11.append(th11 * 1e3); tau_1e_s11.append(te11 * 1e3); k_1e_s11.append(ke11); k_fit_s11.append(kf11); max_dp_s11.append(vm11)
+    idx_t1 = int(np.argmax(t1))
+    mask_t1 = tlist >= (tlist[idx_t1] + 0.15)
+    kt1 = -np.polyfit(tlist[mask_t1] - tlist[idx_t1], np.log(t1[mask_t1]), 1)[0]
+    k_fit_t1.append(kt1)
+    tau_t1.append(1.0 / kt1)
+    max_dp_t1.append((-np.gradient(t1, tlist))[idx_t1:].max())
+
+tau_half_s10 = np.array(tau_half_s10); tau_1e_s10 = np.array(tau_1e_s10); k_1e_s10 = np.array(k_1e_s10); k_fit_s10 = np.array(k_fit_s10); max_dp_s10 = np.array(max_dp_s10)
+tau_half_s11 = np.array(tau_half_s11); tau_1e_s11 = np.array(tau_1e_s11); k_1e_s11 = np.array(k_1e_s11); k_fit_s11 = np.array(k_fit_s11); max_dp_s11 = np.array(max_dp_s11)
+k_fit_t1 = np.array(k_fit_t1); tau_t1 = np.array(tau_t1); max_dp_t1 = np.array(max_dp_t1)
+
+fig_dec_g, axs_dec_g = plt.subplots(2, 3, figsize=(20, 11.5))
+fig_dec_g.suptitle("Post-Peak Exciton Decay Rate Analysis Across 20 Energy-Normalized Gaussian Pulses", fontsize=15, fontweight="bold", y=0.98)
+
+# Panel (a): Effective Singlet Decay Rates k_{1/e} and k_{fit} vs FWHM
+ax_d1 = axs_dec_g[0, 0]
+ax_d1.plot(fwhms_g, k_1e_s10, "s-", color="#e6a817", lw=2.2, ms=6, label=r"$S_1^0$ Effective Rate $k_{1/e} = 1/\tau_{1/e}$")
+ax_d1.plot(fwhms_g, k_fit_s10, "s--", color="#b88200", lw=1.7, ms=4.5, alpha=0.85, label=r"$S_1^0$ Exp-Fit Rate $k_{\mathrm{fit}}$ ($90\% \to 20\%$)")
+ax_d1.plot(fwhms_g, k_1e_s11, "^-", color="#17a2b8", lw=2.2, ms=6, label=r"$S_1^1$ Effective Rate $k_{1/e} = 1/\tau_{1/e}$")
+ax_d1.plot(fwhms_g, k_fit_s11, "^--", color="#0f6c7a", lw=1.7, ms=4.5, alpha=0.85, label=r"$S_1^1$ Exp-Fit Rate $k_{\mathrm{fit}}$ ($90\% \to 20\%$)")
+ax_d1.axhline(5.5, color="gray", ls=":", lw=1.5, label=r"Intrinsic $\gamma_{\mathrm{ISC}} + \gamma_m = 5.5\ \mathrm{ps}^{-1}$")
+ax_d1.set_title(r"(a) Singlet Post-Peak Decay Rate $k_{\mathrm{decay}}$ vs. FWHM", fontsize=11, fontweight="bold", pad=24)
+ax_d1.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_d1.set_ylabel(r"Decay Rate ($\mathrm{ps}^{-1}$)")
+ax_d1.set_ylim(1.5, 6.9)
+ax_d1.grid(True, alpha=0.3)
+ax_d1.legend(loc="upper right", frameon=True, fontsize=8.0)
+
+ax_d1_top = ax_d1.twiny()
+ax_d1_top.set_xlim(ax_d1.get_xlim())
+tick_mults_d = [0.5, 1.0, 2.5, 5.0, 7.0, 9.0, 11.0]
+ax_d1_top.set_xticks([m * (sigma_orig * fwhm_factor) for m in tick_mults_d])
+ax_d1_top.set_xticklabels([f"{m:g}x" for m in tick_mults_d], fontsize=8)
+ax_d1_top.set_xlabel(r"Width Multiplier ($\sigma / \sigma_{\mathrm{orig}}$)", fontsize=8.5, labelpad=4)
+
+# Panel (b): Characteristic Post-Peak Decay Times tau_{1/e} and tau_{1/2} (fs)
+ax_d2 = axs_dec_g[0, 1]
+ax_d2.plot(fwhms_g, tau_1e_s10, "s-", color="#e6a817", lw=2.2, ms=6, label=r"$S_1^0$ $1/e$ Decay Time $\tau_{1/e}$")
+ax_d2.plot(fwhms_g, tau_half_s10, "s--", color="#b88200", lw=1.7, ms=4.5, label=r"$S_1^0$ Half-Life $\tau_{1/2}$")
+ax_d2.plot(fwhms_g, tau_1e_s11, "^-", color="#17a2b8", lw=2.2, ms=6, label=r"$S_1^1$ $1/e$ Decay Time $\tau_{1/e}$")
+ax_d2.plot(fwhms_g, tau_half_s11, "^--", color="#0f6c7a", lw=1.7, ms=4.5, label=r"$S_1^1$ Half-Life $\tau_{1/2}$")
+ax_d2.axhline(1000.0 / 5.5, color="gray", ls=":", lw=1.5, label=r"Intrinsic $(\gamma_{\mathrm{ISC}} + \gamma_m)^{-1} = 181.8$ fs")
+ax_d2.set_title(r"(b) Singlet Post-Peak Lifetime $\tau_{1/e}$ & Half-Life $\tau_{1/2}$ vs. FWHM", fontsize=11, fontweight="bold", pad=12)
+ax_d2.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_d2.set_ylabel("Post-Peak Decay Time (fs)")
+ax_d2.set_ylim(80, 440)
+ax_d2.grid(True, alpha=0.3)
+ax_d2.legend(loc="upper left", frameon=True, fontsize=8.0)
+
+# Panel (c): Triplet (T1) Post-Peak Decay Rate & Storage Lifetime
+ax_d3 = axs_dec_g[0, 2]
+ax_d3.plot(fwhms_g, k_fit_t1 * 1e3, "o-", color="#9467bd", lw=2.2, ms=6, label=r"$T_1$ Effective Decay Rate $k_{\mathrm{eff}}(T_1)$")
+ax_d3.axhline(10.0, color="gray", ls="--", lw=1.3, label=r"Bare Triplet Rate $\gamma_T = 10.0 \times 10^{-3}\ \mathrm{ps}^{-1}$")
+ax_d3.set_title(r"(c) Triplet ($T_1$) Post-Peak Decay Rate & Storage Lifetime", fontsize=11, fontweight="bold", pad=12)
+ax_d3.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_d3.set_ylabel(r"$T_1$ Decay Rate $k_{\mathrm{eff}}(T_1)$ ($\times 10^{-3}\ \mathrm{ps}^{-1}$)", color="#5a3582")
+ax_d3.tick_params(axis="y", labelcolor="#5a3582")
+ax_d3.set_ylim(9.2, 10.2)
+ax_d3.grid(True, alpha=0.3)
+
+ax_d3_r = ax_d3.twinx()
+ax_d3_r.plot(fwhms_g, tau_t1, "d--", color="#2ca02c", lw=1.8, ms=5, label=r"$T_1$ Storage Lifetime $\tau_{T_1} = 1/k_{\mathrm{eff}}$")
+ax_d3_r.set_ylabel(r"Effective Storage Lifetime $\tau_{T_1}$ (ps)", color="#1b691b")
+ax_d3_r.tick_params(axis="y", labelcolor="#1b691b")
+ax_d3_r.set_ylim(98, 108)
+lines_d3, labels_d3 = ax_d3.get_legend_handles_labels()
+lines_d3r, labels_d3r = ax_d3_r.get_legend_handles_labels()
+ax_d3.legend(lines_d3 + lines_d3r, labels_d3 + labels_d3r, loc="center right", frameon=True, fontsize=8.0)
+
+# Panel (d): Maximum Absolute Post-Peak Decay Speed max(-dP/dt)
+ax_d4 = axs_dec_g[1, 0]
+ax_d4.plot(fwhms_g, max_dp_s10, "s-", color="#e6a817", lw=2.2, ms=6, label=r"$S_1^0$: $\max_{t>t_{\mathrm{peak}}}(-dP_{S_1^0}/dt)$")
+ax_d4.plot(fwhms_g, max_dp_s11, "^-", color="#17a2b8", lw=2.2, ms=6, label=r"$S_1^1$: $\max_{t>t_{\mathrm{peak}}}(-dP_{S_1^1}/dt)$")
+ax_d4.plot(fwhms_g, max_dp_t1 * 100.0, "o-", color="#9467bd", lw=2.0, ms=5.5, label=r"$T_1$: $\max_{t>t_{\mathrm{peak}}}(-dP_{T_1}/dt) \times 100$")
+ax_d4.annotate("Coherent Polariton Spike\n0.650/ps (0.5x, 17.5 fs)", xy=(fwhms_g[0], max_dp_s10[0]), xytext=(fwhms_g[0]+25, max_dp_s10[0]-0.015),
+               arrowprops=dict(arrowstyle="->", color="#9c6d00", lw=1.2), fontsize=8.0, color="#9c6d00", fontweight="bold")
+ax_d4.annotate(f"Smooth Peak: {max_dp_s10[3]:.3f}/ps\n(2.5x, 87.5 fs)", xy=(fwhms_g[3], max_dp_s10[3]), xytext=(fwhms_g[3]+45, max_dp_s10[3]+0.03),
+               arrowprops=dict(arrowstyle="->", color="#9c6d00", lw=1.2), fontsize=8.0, color="#9c6d00", fontweight="bold")
+ax_d4.set_title(r"(d) Maximum Post-Peak Decay Velocity $\max(-dP/dt)$ vs. FWHM", fontsize=11, fontweight="bold")
+ax_d4.set_xlabel("Gaussian Pulse Width FWHM (fs)")
+ax_d4.set_ylabel(r"Max Decay Velocity $\max(-dP/dt)$ ($\mathrm{ps}^{-1}$)")
+ax_d4.set_ylim(0, 0.72)
+ax_d4.grid(True, alpha=0.3)
+ax_d4.legend(loc="upper right", frameon=True, fontsize=8.0)
+
+# Panel (e): Normalized Post-Peak Decay Curves P(t - t_peak) / P_peak (Semilog)
+ax_d5 = axs_dec_g[1, 1]
+cmap_d = plt.cm.viridis
+norm_d = mcolors.Normalize(vmin=fwhms_g.min(), vmax=fwhms_g.max())
+for res, fw in zip(gaussian_results, fwhms_g):
+    s10 = np.real(res.expect[0])
+    idx_pk = int(np.argmax(s10))
+    dt_arr = tlist[idx_pk:] - tlist[idx_pk]
+    p_norm = s10[idx_pk:] / s10[idx_pk]
+    ax_d5.semilogy(dt_arr, p_norm, color=cmap_d(norm_d(fw)), lw=1.6, alpha=0.85)
+
+dt_ref = np.linspace(0, 0.75, 200)
+ax_d5.semilogy(dt_ref, np.exp(-5.5 * dt_ref), "k--", lw=1.6, label=r"Fast ISC Slope $\exp(-(\gamma_{\mathrm{ISC}}+\gamma_m)\Delta t)$ ($5.5\ \mathrm{ps}^{-1}$)")
+dt_ref2 = np.linspace(0.6, 2.2, 200)
+ax_d5.semilogy(dt_ref2, 0.08 * np.exp(-0.5 * (dt_ref2 - 0.6)), "r:", lw=1.8, label=r"Late Tail Slope $\exp(-\gamma_m \Delta t)$ ($0.5\ \mathrm{ps}^{-1}$)")
+ax_d5.axhline(1.0 / np.e, color="gray", ls="-.", lw=1.0, alpha=0.7, label=r"$1/e$ Threshold ($P / P_{\mathrm{peak}} = e^{-1}$)")
+ax_d5.set_xlim(0, 2.2)
+ax_d5.set_ylim(5e-3, 1.2)
+ax_d5.set_title(r"(e) Post-Peak Decay Profiles $P_{S_1^0}(\Delta t) / P_{\mathrm{peak}}$ (Semilog)", fontsize=11, fontweight="bold")
+ax_d5.set_xlabel(r"Time After Peak $\Delta t = t - t_{\mathrm{peak}}$ (ps)")
+ax_d5.set_ylabel(r"Normalized Population $P(\Delta t) / P_{\mathrm{peak}}$")
+ax_d5.grid(True, which="both", alpha=0.25)
+ax_d5.legend(loc="upper right", frameon=True, fontsize=7.8)
+sm_d5 = plt.cm.ScalarMappable(cmap=cmap_d, norm=norm_d)
+sm_d5.set_array([])
+cbar_d5 = fig_dec_g.colorbar(sm_d5, ax=ax_d5, pad=0.02)
+cbar_d5.set_label("Pulse FWHM (fs)", fontsize=8.5)
+
+# Panel (f): Instantaneous Specific Decay Rate \Gamma(\Delta t) = -(1/P) dP/dt
+ax_d6 = axs_dec_g[1, 2]
+for res, fw in zip(gaussian_results, fwhms_g):
+    s10 = np.real(res.expect[0])
+    idx_pk = int(np.argmax(s10))
+    dt_arr = tlist[idx_pk:] - tlist[idx_pk]
+    gamma_inst = -np.gradient(s10, tlist)[idx_pk:] / np.maximum(s10[idx_pk:], 1e-12)
+    ax_d6.plot(dt_arr[1:], gamma_inst[1:], color=cmap_d(norm_d(fw)), lw=1.6, alpha=0.85)
+
+ax_d6.axhline(5.5, color="black", ls="--", lw=1.3, label=r"$\gamma_{\mathrm{ISC}} + \gamma_m = 5.5\ \mathrm{ps}^{-1}$")
+ax_d6.axhline(0.5, color="#d62728", ls=":", lw=1.5, label=r"Radiative Limit $\gamma_m = 0.5\ \mathrm{ps}^{-1}$ ($T_1$ Pauli-Blocked)")
+ax_d6.set_xlim(0, 2.2)
+ax_d6.set_ylim(0, 6.8)
+ax_d6.set_title(r"(f) Instantaneous Specific Decay Rate $\Gamma_{S_1^0}(\Delta t) = -\frac{1}{P}\frac{dP}{dt}$", fontsize=11, fontweight="bold")
+ax_d6.set_xlabel(r"Time After Peak $\Delta t = t - t_{\mathrm{peak}}$ (ps)")
+ax_d6.set_ylabel(r"Instantaneous Decay Rate $\Gamma(\Delta t)$ ($\mathrm{ps}^{-1}$)")
+ax_d6.grid(True, alpha=0.3)
+ax_d6.legend(loc="upper right", frameon=True, fontsize=8.0)
+sm_d6 = plt.cm.ScalarMappable(cmap=cmap_d, norm=norm_d)
+sm_d6.set_array([])
+cbar_d6 = fig_dec_g.colorbar(sm_d6, ax=ax_d6, pad=0.02)
+cbar_d6.set_label("Pulse FWHM (fs)", fontsize=8.5)
+
+plt.tight_layout(rect=[0, 0, 1, 0.96])
+plt.savefig("figures/gaussian/decay_rate_analysis_gaussian.png", dpi=200)
 plt.show()
 print("All 20 Gaussian plots saved successfully.")
 
@@ -376,12 +659,12 @@ for m, res, (E_st, P_ch, Erg) in zip(gaussian_multipliers, gaussian_results, gau
         f"{tag}_E_meV", f"{tag}_P_eV_ps", f"{tag}_Erg_meV"
     ])
 
-np.savez_compressed("protocols_sim_results_gaussian.npz", **save_dict_g)
-print("-> Saved Gaussian simulation data to 'protocols_sim_results_gaussian.npz'")
+np.savez_compressed("data/protocols_sim_results_gaussian.npz", **save_dict_g)
+print("-> Saved Gaussian simulation data to 'data/protocols_sim_results_gaussian.npz'")
 
 csv_matrix_g = np.column_stack(csv_columns_g)
 np.savetxt(
-    "protocols_sim_results_gaussian.csv",
+    "data/protocols_sim_results_gaussian.csv",
     csv_matrix_g,
     delimiter=",",
     header=",".join(csv_headers_g),
@@ -392,5 +675,4 @@ end_time = time.time()
 # 5. Output the results
 print("\n=== Simulation Complete ===")
 print(f"Total time elapsed               : {end_time - start_time:.2f} seconds.")
-print("-> Saved Gaussian summary CSV to 'protocols_sim_results_gaussian.csv'")
-print("-> Saved Gaussian summary CSV to 'protocols_sim_results_gaussian.csv'")
+print("-> Saved Gaussian summary CSV to 'data/protocols_sim_results_gaussian.csv'")

@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
 #SBATCH --time=24:00:00
-#SBATCH --output=slurm-%j.out
+#SBATCH --output=logs/slurm-%j.out
 
 # 1. Activate the shared environment
 source /clusterfs/opt/qupy/bin/activate
